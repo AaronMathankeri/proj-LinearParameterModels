@@ -17,7 +17,7 @@ using namespace std;
 
 void printVector( const vector<double> x ){
       for ( auto i : x){
-	    cout << i << " ";
+	    cout << i << endl;
       }
       cout << endl;
 }
@@ -35,12 +35,12 @@ int main(int argc, char *argv[])
 {
       cout << "Aaron's Back." << endl;
 
-      const int nPatterns = 10;
+      const int nPatterns = 20;
       vector<double> x( nPatterns, 0.0 );
       vector<double> t( nPatterns, 0.0 );
       vector<double> weights( 2, 0.0 );
-      string inputsFile = "./data/linearRegression/inputs.txt";
-      string targetsFile = "./data/linearRegression/targets.txt";
+      string inputsFile = "./data/sineData/inputs.txt";
+      string targetsFile = "./data/sineData/targets.txt";
 
       loadData( x , inputsFile );
       loadData( t , targetsFile );
@@ -50,14 +50,14 @@ int main(int argc, char *argv[])
 
       cout << "Targets" << endl;
       printVector( t );
-
+      /*
       cout << "\nComputing Line of Best Fit ..." << endl;
       weights[1] = computeSlope( x , t);
       weights[0] = computeIntercept( x , t);
       
       cout << "w0 = " << weights[0] << endl;
       cout << "w1 = " << weights[1] << endl;
-
+      */
       return 0;
 }
 
