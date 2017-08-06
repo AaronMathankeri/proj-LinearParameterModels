@@ -10,10 +10,10 @@
 
 #include <vector>
 
-double computeAverage(const std::vector<double> x);
+double computeAverage(const double *x);
 
-double computeSlope(const std::vector<double> x , const std::vector<double> t);
+double computeSlope(const double *x , const double *t);
 
-double computeIntercept(const std::vector<double> x , const std::vector<double> t);
+double computeIntercept(const double *x , const double *t);
 
 #endif /* LINEARREGRESSION_HPP */
