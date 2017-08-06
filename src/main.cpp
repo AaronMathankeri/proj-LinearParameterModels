@@ -11,6 +11,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <math.h>
 #include "linearRegression.hpp"
 
 using namespace std;
@@ -31,6 +32,45 @@ void loadData( vector<double> &x , string fileName ){
       }
 }
 
+void computeOutputs( const vector<double> x, const vector<double> w , vector<double> &y){
+
+      int order = w.size() + 1;
+      for (int i = 0; i < x.size( ) ; ++i) {
+	    double temp = 0.0;
+	    for (int j = 0; j < order; ++j) {
+		  temp += w[j]*pow(x[i], j);
+	    }
+	    y[i] = temp;
+      }
+}
+
+double leastSquaresError( const vector<double> x , const vector<double> t, const vector<double> w){
+      // w only goes up to M--the order of polynomial!
+      vector<double> y( x.size( ) , 0.0 );
+      computeOutputs( x, w, y);
+
+      double error = 0.0;
+      for (int i = 0; i < x.size(); ++i) {
+	    error += (y[i] * x[i] - t[i]) * (y[i] * x[i] - t[i]);
+      }
+
+      error /= 0.5;
+
+      return error;
+}
+
+float fRand(float fMin, float fMax){
+      float f = (float)rand() / RAND_MAX;
+      return fMin + f * (fMax - fMin);
+}
+void setRandomWeights( vector<double> &weights ){
+      for (int i = 0; i < weights.size(); ++i) {
+	    float temp = fRand( -10.0, 10.0);
+	    weights[i] = temp;
+      }
+}
+
+
 int main(int argc, char *argv[])
 {
       cout << "Aaron's Back." << endl;
@@ -38,7 +78,7 @@ int main(int argc, char *argv[])
       const int nPatterns = 20;
       vector<double> x( nPatterns, 0.0 );
       vector<double> t( nPatterns, 0.0 );
-      vector<double> weights( 2, 0.0 );
+
       string inputsFile = "./data/sineData/inputs.txt";
       string targetsFile = "./data/sineData/targets.txt";
 
@@ -50,14 +90,26 @@ int main(int argc, char *argv[])
 
       cout << "Targets" << endl;
       printVector( t );
-      /*
-      cout << "\nComputing Line of Best Fit ..." << endl;
-      weights[1] = computeSlope( x , t);
-      weights[0] = computeIntercept( x , t);
-      
-      cout << "w0 = " << weights[0] << endl;
-      cout << "w1 = " << weights[1] << endl;
-      */
+
+      const int M = 3; //polynomial order
+      vector<double> weights( M + 1, 0.0 );
+      setRandomWeights( weights );
+
+      cout<< "Weights" << endl;
+      printVector( weights );
+
+      cout << "Error in estimation is = " << leastSquaresError( x, t, weights ) << endl;
+
+      //perform optimization
+
       return 0;
 }
 
+/*
+  cout << "\nComputing Line of Best Fit ..." << endl;
+  weights[1] = computeSlope( x , t);
+  weights[0] = computeIntercept( x , t);
+      
+  cout << "w0 = " << weights[0] << endl;
+  cout << "w1 = " << weights[1] << endl;
+*/
