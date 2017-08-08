@@ -69,6 +69,16 @@ double *computeDesignMatrix( double *x ){
       return Phi;
 }
 
+void computeNormalEquations( double *moorePenrosePhi, double *t, double *w ){
+      // compute normal equations...
+      //final solution should just be Moore-Penrose * t
+      double alpha = 1.0;
+      double beta = 0.0;
+      cblas_dgemv( CblasRowMajor, CblasNoTrans, ORDER, NUM_PATTERNS,
+      		   alpha, moorePenrosePhi, NUM_PATTERNS, t, 1, beta, w, 1);
+      
+}
+
 int main(int argc, char *argv[])
 {
       cout << " Aaron's Back." << endl;
@@ -94,7 +104,7 @@ int main(int argc, char *argv[])
 
       designTranspose = (double *)mkl_malloc( ORDER*NUM_PATTERNS*sizeof( double ), 64 );
       A = (double *)mkl_malloc( ORDER*ORDER*sizeof( double ), 64 );
-      B = (double *)mkl_malloc( ORDER*sizeof( double ), 64 );
+      B = (double *)mkl_malloc( ORDER*NUM_PATTERNS*sizeof( double ), 64 );
       alpha = 1.0;
       beta = 0.0;
       
@@ -104,7 +114,7 @@ int main(int argc, char *argv[])
      
       memset( designTranspose, 0.0, ORDER* NUM_PATTERNS*sizeof(double));
       memset( A, 0.0, ORDER* ORDER*sizeof(double));
-      memset( B, 0.0, ORDER*sizeof(double));
+      memset( B, 0.0, ORDER*NUM_PATTERNS*sizeof(double));
 
       loadData( x , inputsFile );
       loadData( t , targetsFile );
@@ -142,30 +152,26 @@ int main(int argc, char *argv[])
       printf ("\n Matrix Product A : \n");
       printMatrix( A, ORDER, ORDER );
 
-
       dgetrf( &ORDER, &ORDER, A, &ORDER, IPIV, &INFO );
       dgetri( &ORDER, A, &ORDER, IPIV, WORK, &LWORK, &INFO );
 
       printf ("\n Inverse A : \n");
       printMatrix( A, ORDER, ORDER );
       //--------------------------------------------------------------------------------
-      //get B
+      // A * phi' = moore penrose!
+      cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, 
+		  ORDER, NUM_PATTERNS, ORDER, alpha, A,
+		  ORDER, designTranspose, NUM_PATTERNS, beta, B, NUM_PATTERNS);
 
-      cblas_dgemv( CblasRowMajor, CblasNoTrans, ORDER, NUM_PATTERNS,
-		   alpha, designTranspose, NUM_PATTERNS, t, 1, beta, B, 1);
-
-      printf(" Vector B\n");
-      printVector( B , ORDER );      
-
-      //final solution should just be A * b
-      cblas_dgemv( CblasRowMajor, CblasNoTrans, ORDER, ORDER,
-		   alpha, A, ORDER, B, 1, beta, w, 1);
+      printf ("\n Moore Penrose: \n");
+      printMatrix( B, ORDER, NUM_PATTERNS );
       //--------------------------------------------------------------------------------
-
       cout << "\nComputing Line of Best Fit ..." << endl;
+      // compute normal equations...
+      computeNormalEquations( B, t , w);
+
       cout << " w0 = " << w[0] << endl;
       cout << " w1 = " << w[1] << endl;
-
       //--------------------------------------------------------------------------------
       printf ("\n Deallocating memory \n\n");
       mkl_free( x );
