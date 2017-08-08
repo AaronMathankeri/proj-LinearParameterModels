@@ -19,11 +19,6 @@ using namespace std;
 const int NUM_PATTERNS = 10;
 const int ORDER = 2;
 
-//TODO:
-// 1. computing design matrix can be abstracted [complete]
-// 2. computing inverse can be abstracted
-// 3. solving Normal equations can be abstracted
-// 4. Steps 2 & 3 are 'Moore-Penrose psuedo-inverse'. make it one function call!
 void printVector( const double *x , const int length ){
       for (int i = 0; i < length; i++) {
 	    printf ("%12.3f", x[i]);
@@ -49,9 +44,7 @@ void loadData( double *x , string fileName ){
       }
 }
 
-double *computeDesignMatrix( double *x ){
-     double *Phi = (double *)mkl_malloc( NUM_PATTERNS*ORDER*sizeof( double ), 64 );
-     memset( Phi, 0.0, NUM_PATTERNS * ORDER* sizeof(double));     
+void computeDesignMatrix( double *x, double *Phi ){
       //set first column to 1--dummy index to calculate w0
       // maybe in an opportunity for blas routines?
       for (int i = 0; i < NUM_PATTERNS*ORDER; ++i) {
@@ -66,17 +59,53 @@ double *computeDesignMatrix( double *x ){
 		  }
 	    }
       }
-      return Phi;
 }
 
-void computeNormalEquations( double *moorePenrosePhi, double *t, double *w ){
+void solveNormalEquations( double *moorePenrosePhi, double *t, double *w ){
       // compute normal equations...
       //final solution should just be Moore-Penrose * t
       double alpha = 1.0;
       double beta = 0.0;
       cblas_dgemv( CblasRowMajor, CblasNoTrans, ORDER, NUM_PATTERNS,
       		   alpha, moorePenrosePhi, NUM_PATTERNS, t, 1, beta, w, 1);
-      
+}
+
+void computeMoorePenroseInverse( double* Phi , double *MoorePenrose ){
+      double *PhiTranspose = (double *)mkl_malloc( ORDER*NUM_PATTERNS*sizeof( double ), 64 );
+      double *A = (double *)mkl_malloc( ORDER*ORDER*sizeof( double ), 64 );
+      double alpha = 1.0;
+      double beta = 0.0;
+      //declare MKL variables for inverse calculation
+      int LWORK = ORDER*ORDER;
+      int INFO;
+      int *IPIV = (int *)mkl_malloc( (ORDER+1)*sizeof( int ), 64 );
+      double *WORK = (double *)mkl_malloc( LWORK*sizeof( double ), 64 );
+
+      memset( PhiTranspose, 0.0, ORDER* NUM_PATTERNS*sizeof(double));
+      memset( A, 0.0, ORDER* ORDER*sizeof(double));
+      //memset( B, 0.0, ORDER*NUM_PATTERNS*sizeof(double));
+
+      // calculate transpose
+      mkl_domatcopy('R' , 'T' ,  NUM_PATTERNS, ORDER, alpha,
+		    Phi, ORDER, PhiTranspose, NUM_PATTERNS);
+
+      //calculate product
+      cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, 
+		  ORDER, ORDER, NUM_PATTERNS, alpha, PhiTranspose,
+		  NUM_PATTERNS, Phi, ORDER, beta, A, ORDER);
+      //calculate inverse
+            dgetrf( &ORDER, &ORDER, A, &ORDER, IPIV, &INFO );
+      dgetri( &ORDER, A, &ORDER, IPIV, WORK, &LWORK, &INFO );
+
+      // A * phi' = moore penrose!
+      cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, 
+		  ORDER, NUM_PATTERNS, ORDER, alpha, A,
+		  ORDER, PhiTranspose, NUM_PATTERNS, beta, MoorePenrose, NUM_PATTERNS);
+
+      mkl_free( PhiTranspose );
+      mkl_free( A );
+      mkl_free( IPIV );
+      mkl_free( WORK );
 }
 
 int main(int argc, char *argv[])
@@ -87,34 +116,19 @@ int main(int argc, char *argv[])
       string targetsFile = "./data/linearRegression/targets.txt";
 
       // declare variables for calculations
-      double *x, *t, *w;
-      double *designMatrix, *designTranspose;
-      double *A, *B;
-      double alpha, beta;
-
-      //declare MKL variables for inverse calculation
-      int LWORK = ORDER*ORDER;
-      int INFO;
-      int *IPIV = (int *)mkl_malloc( (ORDER+1)*sizeof( int ), 64 );
-      double *WORK = (double *)mkl_malloc( LWORK*sizeof( double ), 64 );
+      double *x, *t, *w, *designMatrix, *moorePenroseDesignInverse;
 
       x = (double *)mkl_malloc( NUM_PATTERNS*sizeof( double ), 64 );
       t = (double *)mkl_malloc( NUM_PATTERNS*sizeof( double ), 64 );
       w = (double *)mkl_malloc( (ORDER)*sizeof( double ), 64 );
-
-      designTranspose = (double *)mkl_malloc( ORDER*NUM_PATTERNS*sizeof( double ), 64 );
-      A = (double *)mkl_malloc( ORDER*ORDER*sizeof( double ), 64 );
-      B = (double *)mkl_malloc( ORDER*NUM_PATTERNS*sizeof( double ), 64 );
-      alpha = 1.0;
-      beta = 0.0;
+      designMatrix = (double *)mkl_malloc( NUM_PATTERNS*ORDER*sizeof( double ), 64 );
+      moorePenroseDesignInverse = (double *)mkl_malloc( ORDER*NUM_PATTERNS*sizeof( double ), 64 );
       
       memset( x, 0.0,  NUM_PATTERNS * sizeof(double));
       memset( t, 0.0,  NUM_PATTERNS * sizeof(double));
-      memset( w, 0.0,  (ORDER) * sizeof(double));      
-     
-      memset( designTranspose, 0.0, ORDER* NUM_PATTERNS*sizeof(double));
-      memset( A, 0.0, ORDER* ORDER*sizeof(double));
-      memset( B, 0.0, ORDER*NUM_PATTERNS*sizeof(double));
+      memset( w, 0.0,  ORDER* sizeof(double));
+      memset( designMatrix, 0.0, NUM_PATTERNS * ORDER* sizeof(double));     
+      memset( moorePenroseDesignInverse, 0.0,  ORDER*NUM_PATTERNS * sizeof(double));      
 
       loadData( x , inputsFile );
       loadData( t , targetsFile );
@@ -124,51 +138,16 @@ int main(int argc, char *argv[])
 
       cout << "Targets" << endl;
       printVector( t , NUM_PATTERNS );
-
       //--------------------------------------------------------------------------------
-      cout << "\nComputing Design Matrix ..." << endl;
-      designMatrix = computeDesignMatrix( x );
       printf ("\n Design Matrix: \n");
+      computeDesignMatrix( x, designMatrix );
       printMatrix( designMatrix, NUM_PATTERNS, ORDER );
       //--------------------------------------------------------------------------------
-      //*
-      // compute matrices for w_ml calculations
-      // 1. need Phi_Transpose
-      mkl_domatcopy('R' , 'T' ,  NUM_PATTERNS, ORDER, alpha,
-		    designMatrix, ORDER, designTranspose, NUM_PATTERNS);
-
-      printf ("\n Design Matrix Transpose: \n");
-      printMatrix( designTranspose, ORDER, NUM_PATTERNS );
-      //2. Inversion
-      //3. multiplication
-
-      // A = (Phi'*Phi)
-      // B = Phi'*t
-      // w = A^-1 * B
-      cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, 
-		  ORDER, ORDER, NUM_PATTERNS, alpha, designTranspose,
-		  NUM_PATTERNS, designMatrix, ORDER, beta, A, ORDER);
-
-      printf ("\n Matrix Product A : \n");
-      printMatrix( A, ORDER, ORDER );
-
-      dgetrf( &ORDER, &ORDER, A, &ORDER, IPIV, &INFO );
-      dgetri( &ORDER, A, &ORDER, IPIV, WORK, &LWORK, &INFO );
-
-      printf ("\n Inverse A : \n");
-      printMatrix( A, ORDER, ORDER );
+      // compute moore-penrose psuedo inverse of design matrix
+      computeMoorePenroseInverse( designMatrix , moorePenroseDesignInverse );
       //--------------------------------------------------------------------------------
-      // A * phi' = moore penrose!
-      cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, 
-		  ORDER, NUM_PATTERNS, ORDER, alpha, A,
-		  ORDER, designTranspose, NUM_PATTERNS, beta, B, NUM_PATTERNS);
-
-      printf ("\n Moore Penrose: \n");
-      printMatrix( B, ORDER, NUM_PATTERNS );
-      //--------------------------------------------------------------------------------
-      cout << "\nComputing Line of Best Fit ..." << endl;
-      // compute normal equations...
-      computeNormalEquations( B, t , w);
+      cout << "\nSolving Normal Equations ..." << endl;
+      solveNormalEquations( moorePenroseDesignInverse, t , w);
 
       cout << " w0 = " << w[0] << endl;
       cout << " w1 = " << w[1] << endl;
@@ -178,11 +157,7 @@ int main(int argc, char *argv[])
       mkl_free( t );
       mkl_free( w );
       mkl_free( designMatrix );
-      mkl_free( designTranspose );
-      mkl_free( A );
-      mkl_free( B );
-      mkl_free( IPIV );
-      mkl_free( WORK );
+      mkl_free( moorePenroseDesignInverse );
       printf (" Example completed. \n\n");
 
       return 0;
