@@ -9,105 +9,18 @@
  *
  */
 #include <iostream>
-#include <fstream>
-#include <sstream>
-#include "linearRegression.hpp"
 #include "mkl.h"
+#include "ioFunctions.hpp"
+#include "parameters.hpp"
+#include "linearParameterModels.hpp"
 
 using namespace std;
-
-const int NUM_PATTERNS = 10;
-const int ORDER = 2;
-
-void printVector( const double *x , const int length ){
-      for (int i = 0; i < length; i++) {
-	    printf ("%12.3f", x[i]);
-	    printf ("\n");
-      }
-}
-
-void printMatrix( const double *x, const int nRows, const int nCols){
-      for (int i=0; i < nRows; i++) {
-	    for (int j=0; j < nCols; j++) {
-		  printf ("%12.3f", x[i*nCols +j]);
-	    }
-	    printf ("\n");
-      }
-}
-
-void loadData( double *x , string fileName ){
-      ifstream file  ( fileName );
-      if(file.is_open()) {
-	    for (int i = 0; i < NUM_PATTERNS; ++i) {
-		  file >> x[i];
-	    }
-      }
-}
-
-void computeDesignMatrix( double *x, double *Phi ){
-      //set first column to 1--dummy index to calculate w0
-      // maybe in an opportunity for blas routines?
-      for (int i = 0; i < NUM_PATTERNS*ORDER; ++i) {
-	    Phi[i] = 1.0;
-	    i++;
-      }
-      // phi(x) = x--> identity basis function for linear regression
-      for (int i = 0; i < NUM_PATTERNS; ++i) {
-	    for (int j = 0; j < ORDER; ++j) {
-		  if (( j % 2) != 0) {
-			Phi[i*ORDER + j] = x[i];			
-		  }
-	    }
-      }
-}
-
-void computePseudoInverse( double* Phi , double *phiPsuedoInverse ){
-      double *A = (double *)mkl_malloc( ORDER*ORDER*sizeof( double ), 64 );
-      double alpha = 1.0;
-      double beta = 0.0;
-      //declare MKL variables for inverse calculation
-      int LWORK = ORDER*ORDER;
-      int INFO;
-      int *IPIV = (int *)mkl_malloc( (ORDER+1)*sizeof( int ), 64 );
-      double *WORK = (double *)mkl_malloc( LWORK*sizeof( double ), 64 );
-
-      memset( A, 0.0, ORDER* ORDER*sizeof(double));
-
-      //calculate product = Phi' * Phi = A
-      cblas_dgemm(CblasRowMajor, CblasTrans, CblasNoTrans, 
-		  ORDER, ORDER, NUM_PATTERNS, alpha, Phi,
-		  ORDER, Phi, ORDER, beta, A, ORDER);
-
-      //calculate inverse A = (A)^-1
-      dgetrf( &ORDER, &ORDER, A, &ORDER, IPIV, &INFO );
-      dgetri( &ORDER, A, &ORDER, IPIV, WORK, &LWORK, &INFO );
-
-      // A * phi' = moore penrose!
-      cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans, 
-		  ORDER, NUM_PATTERNS, ORDER, alpha, A,
-		  ORDER, Phi, ORDER, beta, phiPsuedoInverse, NUM_PATTERNS);
-
-      mkl_free( A );
-      mkl_free( IPIV );
-      mkl_free( WORK );
-}
-
-void solveNormalEquations( double *inversePhi, double *t, double *w ){
-      // compute normal equations...
-      //final solution should just be Moore-Penrose * t
-      double alpha = 1.0;
-      double beta = 0.0;
-      cblas_dgemv( CblasRowMajor, CblasNoTrans, ORDER, NUM_PATTERNS,
-      		   alpha, inversePhi, NUM_PATTERNS, t, 1, beta, w, 1);
-}
 
 int main(int argc, char *argv[])
 {
       cout << " Aaron's Back." << endl;
 
-      string inputsFile = "./data/linearRegression/inputs.txt";
-      string targetsFile = "./data/linearRegression/targets.txt";
-
+      //--------------------------------------------------------------------------------
       // declare variables for calculations
       double *x, *t, *w, *designMatrix, *designPseudoInverse;
 
@@ -122,6 +35,10 @@ int main(int argc, char *argv[])
       memset( w, 0.0,  ORDER* sizeof(double));
       memset( designMatrix, 0.0, NUM_PATTERNS * ORDER* sizeof(double));     
       memset( designPseudoInverse, 0.0,  ORDER*NUM_PATTERNS * sizeof(double));      
+      //--------------------------------------------------------------------------------
+      //read data
+      string inputsFile = "./data/linearRegression/inputs.txt";
+      string targetsFile = "./data/linearRegression/targets.txt";
 
       loadData( x , inputsFile );
       loadData( t , targetsFile );
