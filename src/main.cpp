@@ -61,17 +61,7 @@ void computeDesignMatrix( double *x, double *Phi ){
       }
 }
 
-void solveNormalEquations( double *moorePenrosePhi, double *t, double *w ){
-      // compute normal equations...
-      //final solution should just be Moore-Penrose * t
-      double alpha = 1.0;
-      double beta = 0.0;
-      cblas_dgemv( CblasRowMajor, CblasNoTrans, ORDER, NUM_PATTERNS,
-      		   alpha, moorePenrosePhi, NUM_PATTERNS, t, 1, beta, w, 1);
-}
-
-void computeMoorePenroseInverse( double* Phi , double *MoorePenrose ){
-      double *PhiTranspose = (double *)mkl_malloc( ORDER*NUM_PATTERNS*sizeof( double ), 64 );
+void computePseudoInverse( double* Phi , double *phiPsuedoInverse ){
       double *A = (double *)mkl_malloc( ORDER*ORDER*sizeof( double ), 64 );
       double alpha = 1.0;
       double beta = 0.0;
@@ -81,31 +71,34 @@ void computeMoorePenroseInverse( double* Phi , double *MoorePenrose ){
       int *IPIV = (int *)mkl_malloc( (ORDER+1)*sizeof( int ), 64 );
       double *WORK = (double *)mkl_malloc( LWORK*sizeof( double ), 64 );
 
-      memset( PhiTranspose, 0.0, ORDER* NUM_PATTERNS*sizeof(double));
       memset( A, 0.0, ORDER* ORDER*sizeof(double));
-      //memset( B, 0.0, ORDER*NUM_PATTERNS*sizeof(double));
 
-      // calculate transpose
-      mkl_domatcopy('R' , 'T' ,  NUM_PATTERNS, ORDER, alpha,
-		    Phi, ORDER, PhiTranspose, NUM_PATTERNS);
+      //calculate product = Phi' * Phi = A
+      cblas_dgemm(CblasRowMajor, CblasTrans, CblasNoTrans, 
+		  ORDER, ORDER, NUM_PATTERNS, alpha, Phi,
+		  ORDER, Phi, ORDER, beta, A, ORDER);
 
-      //calculate product
-      cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, 
-		  ORDER, ORDER, NUM_PATTERNS, alpha, PhiTranspose,
-		  NUM_PATTERNS, Phi, ORDER, beta, A, ORDER);
-      //calculate inverse
-            dgetrf( &ORDER, &ORDER, A, &ORDER, IPIV, &INFO );
+      //calculate inverse A = (A)^-1
+      dgetrf( &ORDER, &ORDER, A, &ORDER, IPIV, &INFO );
       dgetri( &ORDER, A, &ORDER, IPIV, WORK, &LWORK, &INFO );
 
       // A * phi' = moore penrose!
-      cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, 
+      cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans, 
 		  ORDER, NUM_PATTERNS, ORDER, alpha, A,
-		  ORDER, PhiTranspose, NUM_PATTERNS, beta, MoorePenrose, NUM_PATTERNS);
+		  ORDER, Phi, ORDER, beta, phiPsuedoInverse, NUM_PATTERNS);
 
-      mkl_free( PhiTranspose );
       mkl_free( A );
       mkl_free( IPIV );
       mkl_free( WORK );
+}
+
+void solveNormalEquations( double *inversePhi, double *t, double *w ){
+      // compute normal equations...
+      //final solution should just be Moore-Penrose * t
+      double alpha = 1.0;
+      double beta = 0.0;
+      cblas_dgemv( CblasRowMajor, CblasNoTrans, ORDER, NUM_PATTERNS,
+      		   alpha, inversePhi, NUM_PATTERNS, t, 1, beta, w, 1);
 }
 
 int main(int argc, char *argv[])
@@ -116,19 +109,19 @@ int main(int argc, char *argv[])
       string targetsFile = "./data/linearRegression/targets.txt";
 
       // declare variables for calculations
-      double *x, *t, *w, *designMatrix, *moorePenroseDesignInverse;
+      double *x, *t, *w, *designMatrix, *designPseudoInverse;
 
       x = (double *)mkl_malloc( NUM_PATTERNS*sizeof( double ), 64 );
       t = (double *)mkl_malloc( NUM_PATTERNS*sizeof( double ), 64 );
       w = (double *)mkl_malloc( (ORDER)*sizeof( double ), 64 );
       designMatrix = (double *)mkl_malloc( NUM_PATTERNS*ORDER*sizeof( double ), 64 );
-      moorePenroseDesignInverse = (double *)mkl_malloc( ORDER*NUM_PATTERNS*sizeof( double ), 64 );
+      designPseudoInverse = (double *)mkl_malloc( ORDER*NUM_PATTERNS*sizeof( double ), 64 );
       
       memset( x, 0.0,  NUM_PATTERNS * sizeof(double));
       memset( t, 0.0,  NUM_PATTERNS * sizeof(double));
       memset( w, 0.0,  ORDER* sizeof(double));
       memset( designMatrix, 0.0, NUM_PATTERNS * ORDER* sizeof(double));     
-      memset( moorePenroseDesignInverse, 0.0,  ORDER*NUM_PATTERNS * sizeof(double));      
+      memset( designPseudoInverse, 0.0,  ORDER*NUM_PATTERNS * sizeof(double));      
 
       loadData( x , inputsFile );
       loadData( t , targetsFile );
@@ -144,10 +137,10 @@ int main(int argc, char *argv[])
       printMatrix( designMatrix, NUM_PATTERNS, ORDER );
       //--------------------------------------------------------------------------------
       // compute moore-penrose psuedo inverse of design matrix
-      computeMoorePenroseInverse( designMatrix , moorePenroseDesignInverse );
+      computePseudoInverse( designMatrix , designPseudoInverse );
       //--------------------------------------------------------------------------------
       cout << "\nSolving Normal Equations ..." << endl;
-      solveNormalEquations( moorePenroseDesignInverse, t , w);
+      solveNormalEquations( designPseudoInverse, t , w);
 
       cout << " w0 = " << w[0] << endl;
       cout << " w1 = " << w[1] << endl;
@@ -157,7 +150,7 @@ int main(int argc, char *argv[])
       mkl_free( t );
       mkl_free( w );
       mkl_free( designMatrix );
-      mkl_free( moorePenroseDesignInverse );
+      mkl_free( designPseudoInverse );
       printf (" Example completed. \n\n");
 
       return 0;
