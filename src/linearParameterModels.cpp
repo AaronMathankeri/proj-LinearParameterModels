@@ -1,20 +1,23 @@
 #include "linearParameterModels.hpp"
 
 void computeDesignMatrix( const double *x, double *Phi ){
+      const int incx = 1;
+      // create ones vector
+      double *ones = (double *)mkl_malloc( NUM_PATTERNS*sizeof( double ), 64 );
+      fill_n(ones, NUM_PATTERNS, 1.0);
+
       //set first column to 1--dummy index to calculate w0
-      // maybe in an opportunity for blas routines?
-      for (int i = 0; i < NUM_PATTERNS*ORDER; ++i) {
-	    Phi[i] = 1.0;
-	    i++;
-      }
+      cblas_dcopy(NUM_PATTERNS, ones, incx, Phi, ORDER);
       // phi(x) = x--> identity basis function for linear regression
       for (int i = 0; i < NUM_PATTERNS; ++i) {
 	    for (int j = 0; j < ORDER; ++j) {
-		  if (( j % 2) != 0) {
-			Phi[i*ORDER + j] = x[i];			
+		  if ( j > 0) {
+			int p = j - 1;
+			Phi[i*ORDER + j] = x[i*(ORDER-1) + p];			
 		  }
 	    }
       }
+      mkl_free( ones );
 }
 
 void computePseudoInverse( const double* Phi , double *phiPsuedoInverse ){

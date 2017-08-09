@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include "mkl.h"
 #include "parameters.hpp"
+#include "ioFunctions.hpp"
 
 void computeDesignMatrix( const double *x, double *Phi );
 void computePseudoInverse( const double* Phi , double *phiPsuedoInverse );

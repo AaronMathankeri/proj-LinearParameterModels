@@ -51,14 +51,15 @@ int main(int argc, char *argv[])
       cout << "Targets" << endl;
       printVector( t, NUM_PATTERNS );
       //--------------------------------------------------------------------------------
-      cout << "Randomly initialize weights:" << endl;
-      setRandomWeights( w );
-      printVector( w, ORDER );
       /*
-      computeOutputs( x, w , y);
-      cout << "\nOutputs" << endl;
-      printVector( y , NUM_PATTERNS );
-      cout << "Least Squares Error :" << computeLeastSquaresError( t , y ) << endl;
+	cout << "Randomly initialize weights:" << endl;
+	setRandomWeights( w );
+	printVector( w, ORDER );
+
+	computeOutputs( x, w , y);
+	cout << "\nOutputs" << endl;
+	printVector( y , NUM_PATTERNS );
+	cout << "Least Squares Error :" << computeLeastSquaresError( t , y ) << endl;
       */
       //--------------------------------------------------------------------------------
       printf ("\n Design Matrix: \n");
@@ -76,8 +77,8 @@ int main(int argc, char *argv[])
       //--------------------------------------------------------------------------------
       // compute outputs
       computeOutputs( x, w , y);
-      cout << "\nOutputs" << endl;
-      printVector( y , NUM_PATTERNS );
+      //cout << "\nOutputs" << endl;
+      //printVector( y , NUM_PATTERNS );
       //--------------------------------------------------------------------------------
       cout << "Least Squares Error :" << computeLeastSquaresError( t , y ) << endl;
       //--------------------------------------------------------------------------------
