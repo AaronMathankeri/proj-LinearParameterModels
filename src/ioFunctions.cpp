@@ -16,7 +16,7 @@ void printMatrix( const double *x, const int nRows, const int nCols){
       }
 }
 
-void loadData( double *x , string fileName ){
+void loadData( double *x , const string fileName ){
       ifstream file  ( fileName );
       if(file.is_open()) {
 	    for (int i = 0; i < NUM_PATTERNS; ++i) {

@@ -1,6 +1,6 @@
 #include "linearParameterModels.hpp"
 
-void computeDesignMatrix( double *x, double *Phi ){
+void computeDesignMatrix( const double *x, double *Phi ){
       //set first column to 1--dummy index to calculate w0
       // maybe in an opportunity for blas routines?
       for (int i = 0; i < NUM_PATTERNS*ORDER; ++i) {
@@ -17,7 +17,7 @@ void computeDesignMatrix( double *x, double *Phi ){
       }
 }
 
-void computePseudoInverse( double* Phi , double *phiPsuedoInverse ){
+void computePseudoInverse( const double* Phi , double *phiPsuedoInverse ){
       double *A = (double *)mkl_malloc( ORDER*ORDER*sizeof( double ), 64 );
       double alpha = 1.0;
       double beta = 0.0;
@@ -48,7 +48,7 @@ void computePseudoInverse( double* Phi , double *phiPsuedoInverse ){
       mkl_free( WORK );
 }
 
-void solveNormalEquations( double *inversePhi, double *t, double *w ){
+void solveNormalEquations( const double *inversePhi, const double *t, double *w ){
       // compute normal equations...
       //final solution should just be Moore-Penrose * t
       double alpha = 1.0;
@@ -56,43 +56,32 @@ void solveNormalEquations( double *inversePhi, double *t, double *w ){
       cblas_dgemv( CblasRowMajor, CblasNoTrans, ORDER, NUM_PATTERNS,
       		   alpha, inversePhi, NUM_PATTERNS, t, 1, beta, w, 1);
 }
-
-//------------------------------------------------------------------------------------------------------
-//older functions
-void computeOutputs( const std::vector<double> x, const std::vector<double> w , std::vector<double> &y){
-
-      int order = w.size() + 1;
-      for (int i = 0; i < x.size( ) ; ++i) {
+void computeOutputs( const double *x, const double *w , double *y ){
+      for (int i = 0; i < NUM_PATTERNS; ++i) {
 	    double temp = 0.0;
-	    for (int j = 0; j < order; ++j) {
-		  temp += w[j]*pow(x[i], j);
+	    for (int j = 0; j < ORDER; ++j) {
+		  temp += w[j]*x[i];
 	    }
 	    y[i] = temp;
       }
 }
 
-double leastSquaresError( const std::vector<double> x , const std::vector<double> t, const std::vector<double> w){
-      // w only goes up to M--the order of polynomial!
-      std::vector<double> y( x.size( ) , 0.0 );
-      computeOutputs( x, w, y);
-
+double computeLeastSquaresError( const double *t, const double *y ){
       double error = 0.0;
-      for (int i = 0; i < x.size(); ++i) {
-	    error += (y[i] * x[i] - t[i]) * (y[i] * x[i] - t[i]);
+      for (int i = 0; i < NUM_PATTERNS; ++i) {
+	    error += (y[i] - t[i]) * (y[i] - t[i]);
       }
-
-      error /= 0.5;
-
+      error *= 0.5;
       return error;
 }
-
-float fRand(float fMin, float fMax){
-      float f = (float)rand() / RAND_MAX;
-      return fMin + f * (fMax - fMin);
-}
-void setRandomWeights( std::vector<double> &weights ){
-      for (int i = 0; i < weights.size(); ++i) {
-	    float temp = fRand( -10.0, 10.0);
+void setRandomWeights( double *weights ){
+      for (int i = 0; i < ORDER; ++i) {
+	    double temp = fRand( -10.0, 10.0);
 	    weights[i] = temp;
       }
+}
+
+double fRand( const double fMin, const double fMax){
+      double f = (double)rand() / RAND_MAX;
+      return fMin + f * (fMax - fMin);
 }

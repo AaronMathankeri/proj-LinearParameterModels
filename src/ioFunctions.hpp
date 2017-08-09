@@ -16,6 +16,6 @@
 using namespace std;
 void printVector( const double *x , const int length );
 void printMatrix( const double *x, const int nRows, const int nCols);
-void loadData( double *x , string fileName );
+void loadData( double *x , const string fileName );
 
 #endif /* IOFUNCTIONS_H */
