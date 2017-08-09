@@ -1,23 +1,62 @@
 #include "linearParameterModels.hpp"
 
-void computeDesignMatrix( const double *x, double *Phi ){
-      const int incx = 1;
-      // create ones vector
-      double *ones = (double *)mkl_malloc( NUM_PATTERNS*sizeof( double ), 64 );
-      fill_n(ones, NUM_PATTERNS, 1.0);
+void computeIdentityBasisFuncs( const double *x, double *psi ){
+      // psi(x) = x --> identity basis for linear regression
+      for (int i = 0; i < NUM_PATTERNS; ++i) {
+	    for (int j = 0; j < (ORDER - 1); ++j) {
+		  psi[i*(ORDER - 1) + j] = x[i*(ORDER-1) + j];			
+	    }
+      }
+      //printf ("\n Basis Matrix: \n");
+      //printMatrix( psi, NUM_PATTERNS, (ORDER - 1) );
+      //printf("\n");
+}
 
+void computePolynomialBasisFuncs( const double *x , double *psi ){
+      // psi(x) = (x x^2 x^3) --> polynomial basis
+      for (int i = 0; i < NUM_PATTERNS; ++i) {
+	    for (int j = 0; j < (ORDER - 1); ++j) {
+		  //psi[i*(ORDER - 1) + j] = x[i];
+		  int p = j + 1;
+		  psi[i*(ORDER - 1) + j] = pow(x[i], p);
+	    }
+      }
+      //printf ("\n Basis Matrix: \n");
+      //printMatrix( psi, NUM_PATTERNS, (ORDER - 1) );
+      //printf("\n");
+}
+
+
+
+void computeDesignMatrix( const double *x, double *Phi, const int form ){
+      double *psi, *ones;
+      const int incx = 1;
+      
+      psi = (double *)mkl_malloc( NUM_PATTERNS*(ORDER - 1)*sizeof( double ), 64 );
+      ones = (double *)mkl_malloc( NUM_PATTERNS*sizeof( double ), 64 );
+
+      memset( psi, 0.0, NUM_PATTERNS* (ORDER - 1)*sizeof(double));
+      fill_n(ones, NUM_PATTERNS, 1.0); // create ones vector
+
+      if (form == 0) {
+	    computeIdentityBasisFuncs( x, psi );	    
+      }
+      else {
+	    computePolynomialBasisFuncs( x, psi );
+      }
       //set first column to 1--dummy index to calculate w0
       cblas_dcopy(NUM_PATTERNS, ones, incx, Phi, ORDER);
-      // phi(x) = x--> identity basis function for linear regression
+      // set columns 1 ... M-1 with basis function vectors
       for (int i = 0; i < NUM_PATTERNS; ++i) {
 	    for (int j = 0; j < ORDER; ++j) {
 		  if ( j > 0) {
 			int p = j - 1;
-			Phi[i*ORDER + j] = x[i*(ORDER-1) + p];			
+			Phi[i*ORDER + j] = psi[i*(ORDER-1) + p];			
 		  }
 	    }
       }
       mkl_free( ones );
+      mkl_free( psi );
 }
 
 void computePseudoInverse( const double* Phi , double *phiPsuedoInverse ){

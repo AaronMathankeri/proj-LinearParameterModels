@@ -39,8 +39,8 @@ int main(int argc, char *argv[])
       memset( designPseudoInverse, 0.0,  ORDER*NUM_PATTERNS * sizeof(double));      
       //--------------------------------------------------------------------------------
       //read data
-      string inputsFile = "./data/linearRegression/inputs.txt";
-      string targetsFile = "./data/linearRegression/targets.txt";
+      string inputsFile = "./data/sineData/inputs.txt";
+      string targetsFile = "./data/sineData/targets.txt";
 
       loadData( x , inputsFile );
       loadData( t , targetsFile );
@@ -62,10 +62,13 @@ int main(int argc, char *argv[])
 	cout << "Least Squares Error :" << computeLeastSquaresError( t , y ) << endl;
       */
       //--------------------------------------------------------------------------------
+      // type 0: identity , 1: polynomial, 2: radial
+      const int form = 1;
       printf ("\n Design Matrix: \n");
-      computeDesignMatrix( x, designMatrix );
+      computeDesignMatrix( x, designMatrix , form);
       printMatrix( designMatrix, NUM_PATTERNS, ORDER );
       //--------------------------------------------------------------------------------
+
       // compute moore-penrose psuedo inverse of design matrix
       computePseudoInverse( designMatrix , designPseudoInverse );
       //--------------------------------------------------------------------------------
@@ -93,16 +96,3 @@ int main(int argc, char *argv[])
 
       return 0;
 }
-
-/*
-//LPModels -- polynomial
-  const int M = 3; //polynomial ORDER
-  vector<double> weights( M + 1, 0.0 );
-  setRandomWeights( weights );
-
-  cout<< "Weights" << endl;
-  printVector( weights );
-
-  cout << "Error in estimation is = " << leastSquaresError( x, t, weights ) << endl;
-*/
-
