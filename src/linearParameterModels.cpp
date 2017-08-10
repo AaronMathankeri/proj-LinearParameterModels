@@ -7,26 +7,17 @@ void computeIdentityBasisFuncs( const double *x, double *psi ){
 		  psi[i*(ORDER - 1) + j] = x[i*(ORDER-1) + j];			
 	    }
       }
-      //printf ("\n Basis Matrix: \n");
-      //printMatrix( psi, NUM_PATTERNS, (ORDER - 1) );
-      //printf("\n");
 }
 
 void computePolynomialBasisFuncs( const double *x , double *psi ){
       // psi(x) = (x x^2 x^3) --> polynomial basis
       for (int i = 0; i < NUM_PATTERNS; ++i) {
 	    for (int j = 0; j < (ORDER - 1); ++j) {
-		  //psi[i*(ORDER - 1) + j] = x[i];
 		  int p = j + 1;
 		  psi[i*(ORDER - 1) + j] = pow(x[i], p);
 	    }
       }
-      //printf ("\n Basis Matrix: \n");
-      //printMatrix( psi, NUM_PATTERNS, (ORDER - 1) );
-      //printf("\n");
 }
-
-
 
 void computeDesignMatrix( const double *x, double *Phi, const int form ){
       double *psi, *ones;

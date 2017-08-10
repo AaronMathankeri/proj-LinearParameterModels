@@ -51,24 +51,12 @@ int main(int argc, char *argv[])
       cout << "Targets" << endl;
       printVector( t, NUM_PATTERNS );
       //--------------------------------------------------------------------------------
-      /*
-	cout << "Randomly initialize weights:" << endl;
-	setRandomWeights( w );
-	printVector( w, ORDER );
-
-	computeOutputs( x, w , y);
-	cout << "\nOutputs" << endl;
-	printVector( y , NUM_PATTERNS );
-	cout << "Least Squares Error :" << computeLeastSquaresError( t , y ) << endl;
-      */
-      //--------------------------------------------------------------------------------
       // type 0: identity , 1: polynomial, 2: radial
       const int form = 1;
       printf ("\n Design Matrix: \n");
       computeDesignMatrix( x, designMatrix , form);
       printMatrix( designMatrix, NUM_PATTERNS, ORDER );
       //--------------------------------------------------------------------------------
-
       // compute moore-penrose psuedo inverse of design matrix
       computePseudoInverse( designMatrix , designPseudoInverse );
       //--------------------------------------------------------------------------------
@@ -78,13 +66,9 @@ int main(int argc, char *argv[])
       for (int i = 0; i < ORDER; ++i) {
 	    cout << "w" << i << " = " << w[i] << endl;
       }
-      //cout << " w0 = " << w[0] << endl;
-      //cout << " w1 = " << w[1] << endl;
       //--------------------------------------------------------------------------------
       // compute outputs
       computeOutputs( x, w , y);
-      //cout << "\nOutputs" << endl;
-      //printVector( y , NUM_PATTERNS );
       //--------------------------------------------------------------------------------
       cout << "Least Squares Error :" << computeLeastSquaresError( t , y ) << endl;
       //--------------------------------------------------------------------------------
