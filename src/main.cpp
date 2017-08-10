@@ -39,8 +39,8 @@ int main(int argc, char *argv[])
       memset( designPseudoInverse, 0.0,  ORDER*NUM_PATTERNS * sizeof(double));      
       //--------------------------------------------------------------------------------
       //read data
-      string inputsFile = "./data/linearRegression/inputs.txt";
-      string targetsFile = "./data/linearRegression/targets.txt";
+      string inputsFile = "./data/sineData/inputs.txt";
+      string targetsFile = "./data/sineData/targets.txt";
 
       loadData( x , inputsFile );
       loadData( t , targetsFile );
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
       */
       //--------------------------------------------------------------------------------
       // type 0: identity , 1: polynomial, 2: radial
-      const int form = 0;
+      const int form = 1;
       printf ("\n Design Matrix: \n");
       computeDesignMatrix( x, designMatrix , form);
       printMatrix( designMatrix, NUM_PATTERNS, ORDER );
