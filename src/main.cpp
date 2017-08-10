@@ -75,8 +75,11 @@ int main(int argc, char *argv[])
       cout << "\nSolving Normal Equations ..." << endl;
       solveNormalEquations( designPseudoInverse, t , w);
 
-      cout << " w0 = " << w[0] << endl;
-      cout << " w1 = " << w[1] << endl;
+      for (int i = 0; i < ORDER; ++i) {
+	    cout << "w" << i << " = " << w[i] << endl;
+      }
+      //cout << " w0 = " << w[0] << endl;
+      //cout << " w1 = " << w[1] << endl;
       //--------------------------------------------------------------------------------
       // compute outputs
       computeOutputs( x, w , y);
